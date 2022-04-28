@@ -17,19 +17,13 @@ func Start() {
 
 	router := gin.Default()
 	redisDb, redisJsonDb, sqlDb := driver.GetDbConnection()
-	//
-	//err := sqlDb.AutoMigrate(&models.StudentGrade{}, &models.Report{})
-	//if err != nil {
-	//	log.Println(err)
-	//}
-	//err = sqlDb.Set("gorm:table_options", "ENGINE=Distributed(cluster, default, hits)").AutoMigrate(&models.StudentGrade{}, &models.Report{})
-	//if err != nil {
-	//	log.Println(err)
-	//}
 
-	examHandler := ExamHandlers{service.NewExamService(repositories.NewExamRepositoryDb(redisDb, redisJsonDb))}
-	questionHandler := QuestionHandlers{service.NewQuestionService(repositories.NewQuestionRepositoryDb(redisDb, redisJsonDb))}
-	studentGradeHandler := StudentGradeHandlers{service.NewStudentGradeService(repositories.NewStudentGradeRepositoryDb(sqlDb))}
+	examHandler := ExamHandlers{
+		service.NewExamService(repositories.NewExamRepositoryDb(redisDb, redisJsonDb))}
+	questionHandler := QuestionHandlers{
+		service.NewQuestionService(repositories.NewQuestionRepositoryDb(redisDb, redisJsonDb))}
+	studentGradeHandler := StudentGradeHandlers{
+		service.NewStudentGradeService(repositories.NewStudentGradeRepositoryDb(sqlDb, redisDb, redisJsonDb))}
 
 	//exam endpoints
 	router.POST("/api/exam/create-exam", examHandler.Create)
@@ -44,7 +38,20 @@ func Start() {
 	router.PUT("/api/exam/update-question/:examId/:questionId", questionHandler.Update)
 
 	//student grade endpoints
-	router.POST("/api/exam/add-student-grade/:examId", studentGradeHandler.Add)
+	router.POST("/api/exam/add-student-grade/:userId/:courseId/:examId", studentGradeHandler.Add)
+	router.GET("/api/exam/get-all-student-grades/:userId", studentGradeHandler.GetAllStudentGrades)
+	router.GET("/api/exam/get-all-course-grades/:courseId", studentGradeHandler.GetAllCourseGrades)
+	router.GET("/api/exam/get-all-exam-grades/:examId", studentGradeHandler.GetAllExamGrades)
+	router.GET("/api/exam/get-user-exam-grade/:userId/:courseId/:examId",
+		studentGradeHandler.GetUserCourseExamGrade)
+	router.DELETE("/api/exam/delete-all-student-grades/:userId",
+		studentGradeHandler.DeleteAllStudentGrades)
+	router.DELETE("/api/exam/delete-all-course-grades/:courseId",
+		studentGradeHandler.DeleteAllCourseGrades)
+	router.DELETE("/api/exam/delete-all-exam-grades/:examId",
+		studentGradeHandler.DeleteAllExamGrades)
+	router.DELETE("/api/exam/delete-user-exam-grade/:userId/:courseId/:examId",
+		studentGradeHandler.DeleteUserCourseExamGrade)
 
 	router.Run(viper.GetString("SERVER_PORT"))
 

@@ -2,10 +2,11 @@ package driver
 
 import (
 	"exam_service/pkg/domain/models"
+	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/nitishm/go-rejson"
 	"github.com/spf13/viper"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
 )
@@ -34,38 +35,25 @@ func getRedisDbConnection() (*redis.Client, *rejson.Handler) {
 }
 
 func getPGDbConnetion() *gorm.DB {
-	gormDb, err := gorm.Open(sqlite.Open("studentGrade.db"), &gorm.Config{})
+	psqlInfo := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		viper.GetString("PG_DB_HOST"),
+		viper.GetString("PG_DB_PORT"),
+		viper.GetString("PG_DB_USER"),
+		viper.GetString("PG_DB_PASSWORD"),
+		viper.GetString("PG_DB_NAME"),
+	)
+	gormDb, err := gorm.Open(postgres.Open(psqlInfo), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
+	}
+	err = gormDb.Migrator().DropTable(&models.StudentGrade{}, &models.Report{})
+	if err != nil {
+		panic(err)
 	}
 	err = gormDb.AutoMigrate(&models.StudentGrade{}, &models.Report{})
 	if err != nil {
 		panic(err)
 	}
-
-	//dataSourceName := fmt.Sprintf("host=%s port=%s dbname=%s user=%s password=%s",
-	//	viper.Get("PG_DB_HOST"),
-	//	viper.Get("PG_DB_PORT"),
-	//	viper.Get("PG_DB_NAME"),
-	//	viper.Get("PG_DB_USER"),
-	//	viper.Get("PG_DB_PASSWORD"))
-	//pgDb, err := sql.Open("pgx", dataSourceName)
-	//if err != nil {
-	//	log.Fatal(fmt.Sprintf("unable to conect to db"))
-	//	panic(err)
-	//}
-	//log.Println("pinged pg db")
-	//
-	//gormDB, err := gorm.Open("postgres", pgDb)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//fmt.Println("pg db connected successfully")
-	////gormDB.DropTableIfExists(&models.User{}, &models.Type{}) // For development purposes
-	//err = gormDB.AutoMigrate(&models.StudentGrade{}, &models.Report{})
-	//if err != nil {
-	//	log.Println(err)
-	//}
-	//
 	return gormDb
 }
